@@ -1,20 +1,20 @@
 # quant-metrics-calculator
 
-Paquete de análisis que procesa el historial de operaciones cerradas y la curva de equidad para calcular métricas estadísticas de rendimiento: **Sharpe Ratio**, **Sortino Ratio**, **Profit Factor**, **max drawdown** y **win rate**. Décimo módulo del ecosistema [quant-core-infra](https://github.com/juanmmm21/quant-core-infra).
+Analysis package that processes closed trade history and the equity curve to compute statistical performance metrics: **Sharpe Ratio**, **Sortino Ratio**, **Profit Factor**, **max drawdown**, and **win rate**. Tenth module of the [quant-core-infra](https://github.com/juanmmm21/quant-core-infra) ecosystem.
 
-Repositorio: [github.com/juanmmm21/quant-metrics-calculator](https://github.com/juanmmm21/quant-metrics-calculator)
-
----
-
-## Qué es y qué problema resuelve
-
-Evaluar una estrategia solo por PnL absoluto es insuficiente. Necesitas medir **riesgo ajustado** (Sharpe/Sortino), **consistencia** (profit factor, win rate) y **peor escenario** (max drawdown).
-
-Este módulo transforma fills y equity curve en un informe unificado de rendimiento, compatible con la salida de `event-driven-backtester` y `market-condition-simulator`.
+Repository: [github.com/juanmmm21/quant-metrics-calculator](https://github.com/juanmmm21/quant-metrics-calculator)
 
 ---
 
-## Rol en quant-core-infra
+## What it is and what problem it solves
+
+Evaluating a strategy by absolute PnL alone is insufficient. You need to measure **risk-adjusted return** (Sharpe/Sortino), **consistency** (profit factor, win rate), and **worst-case scenario** (max drawdown).
+
+This module transforms fills and the equity curve into a unified performance report, compatible with the output of `event-driven-backtester` and `market-condition-simulator`.
+
+---
+
+## Role in quant-core-infra
 
 ```text
 event-driven-backtester ──► fills + equity curve ──┐
@@ -26,38 +26,38 @@ market-condition-simulator ──► executions ─────────┤
                                       trade-audit-logger / quant-terminal-web
 ```
 
-Cierra el ciclo de evaluación cuantitativa del backtest.
+Closes the quantitative evaluation loop of the backtest.
 
 ---
 
-## Objetivo
+## Purpose
 
-Demuestra:
+Demonstrates:
 
-- Cálculo de retornos periódicos desde equity curve
-- Sharpe y Sortino con tasa libre de riesgo anualizada
-- Profit factor y win rate desde round-trips FIFO
-- Max drawdown y retorno total
-- Pipelines JSON/JSONL compatibles con el ecosistema
+- Periodic return calculation from the equity curve
+- Sharpe and Sortino with an annualized risk-free rate
+- Profit factor and win rate from FIFO round-trips
+- Max drawdown and total return
+- JSON/JSONL pipelines compatible with the ecosystem
 
 ---
 
-## Métricas calculadas
+## Computed metrics
 
-| Métrica | Fórmula / método |
+| Metric | Formula / method |
 |---------|------------------|
 | **Sharpe** | `mean(excess_returns) / std(excess_returns) × √periods_per_year` |
 | **Sortino** | `mean(excess_returns) / downside_std × √periods_per_year` |
 | **Profit factor** | `gross_profit / gross_loss` |
-| **Max drawdown** | `max((peak - equity) / peak)` sobre la curva |
+| **Max drawdown** | `max((peak - equity) / peak)` over the curve |
 | **Total return** | `(final_equity - initial_equity) / initial_equity` |
 | **Win rate** | `winning_trades / trade_count` |
 
-Los round-trips se reconstruyen con **FIFO long-only** a partir de fills buy/sell.
+Round-trips are reconstructed using **long-only FIFO** from buy/sell fills.
 
 ---
 
-## Arquitectura
+## Architecture
 
 ```text
 fills JSONL + equity JSON
@@ -77,23 +77,23 @@ Returns Sharpe Sortino Drawdown ProfitFactor
 
 ---
 
-## Configuración: `MetricsConfig`
+## Configuration: `MetricsConfig`
 
-| Parámetro | Default | Descripción |
+| Parameter | Default | Description |
 |-----------|---------|-------------|
-| `risk_free_rate_annual` | `0.02` | Tasa libre de riesgo anual (2%) |
-| `periods_per_year` | `252` | Periodos de anualización (días de trading) |
-| `min_observations` | `2` | Mínimo de retornos para ratios |
+| `risk_free_rate_annual` | `0.02` | Annual risk-free rate (2%) |
+| `periods_per_year` | `252` | Annualization periods (trading days) |
+| `min_observations` | `2` | Minimum returns required for ratios |
 
 ---
 
-## Requisitos
+## Requirements
 
 - Python **3.11+**
 
 ---
 
-## Instalación
+## Installation
 
 ```bash
 cd quant-metrics-calculator
@@ -104,7 +104,7 @@ pip install -e ".[dev]"
 
 ---
 
-## Uso CLI
+## CLI usage
 
 ```bash
 quant-metrics-calculator compute \
@@ -115,7 +115,7 @@ quant-metrics-calculator compute \
   --output metrics.json
 ```
 
-### Salida esperada (extracto)
+### Expected output (excerpt)
 
 ```json
 {
@@ -131,7 +131,7 @@ quant-metrics-calculator compute \
 
 ---
 
-## Formatos de entrada
+## Input formats
 
 ### Fills (JSONL)
 
@@ -147,7 +147,7 @@ quant-metrics-calculator compute \
 }
 ```
 
-### Equity curve (JSON array o objeto con `equity_curve`)
+### Equity curve (JSON array or object with `equity_curve`)
 
 ```json
 [
@@ -158,7 +158,7 @@ quant-metrics-calculator compute \
 
 ---
 
-## Uso programático
+## Programmatic usage
 
 ```python
 from decimal import Decimal
@@ -175,7 +175,7 @@ metrics = run_metrics_pipeline(
 
 ---
 
-## Desarrollo
+## Development
 
 ```bash
 pytest -q
@@ -187,23 +187,23 @@ mypy src
 
 ## Troubleshooting
 
-| Síntoma | Causa probable | Solución |
+| Symptom | Likely cause | Solution |
 |---------|----------------|----------|
-| `sell quantity exceeds open long position` | Fills desordenados o short implícito | Ordena cronológicamente; solo long FIFO |
-| Sharpe/Sortino en 0 | Pocos puntos en equity curve | Añade más observaciones o baja `min_observations` |
-| `equity_curve must not be empty` | Archivo equity vacío | Proporciona al menos un punto de equity |
+| `sell quantity exceeds open long position` | Out-of-order fills or implicit short | Sort chronologically; long-only FIFO |
+| Sharpe/Sortino at 0 | Too few points in the equity curve | Add more observations or lower `min_observations` |
+| `equity_curve must not be empty` | Empty equity file | Provide at least one equity point |
 
 ---
 
 ## Roadmap
 
-- [ ] Soporte short-selling en reconstructor FIFO
-- [ ] Métricas rolling (Sharpe móvil 30d)
-- [ ] Export HTML/PDF para `quant-terminal-web`
-- [ ] Integración directa con salida JSON de `event-driven-backtester`
+- [ ] Short-selling support in the FIFO reconstructor
+- [ ] Rolling metrics (30d rolling Sharpe)
+- [ ] HTML/PDF export for `quant-terminal-web`
+- [ ] Direct integration with `event-driven-backtester`'s JSON output
 
 ---
 
-## Licencia
+## License
 
 MIT
