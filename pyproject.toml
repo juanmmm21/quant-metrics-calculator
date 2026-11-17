@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "quant-metrics-calculator"
-version = "0.1.0"
+version = "0.2.0"
 description = "Performance analytics toolkit computing Sharpe, Sortino, profit factor, and equity curves."
 readme = "README.md"
 requires-python = ">=3.11"
