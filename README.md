@@ -57,6 +57,60 @@ Round-trips are reconstructed using **long-only FIFO** from buy/sell fills.
 
 ---
 
+## Overfitting diagnostics
+
+A high backtest Sharpe means little if it is the best of many tries. Two estimates guard against
+that (`overfitting.py`, stdlib only; they use `float` because they are statistics, not money):
+
+| Metric | What it answers | Method |
+|--------|-----------------|--------|
+| **Probabilistic Sharpe (PSR)** | P[true SR > 0] given sample length, skew and kurtosis | Bailey & López de Prado (2012) |
+| **Deflated Sharpe (DSR)** | P[true SR > the best SR expected from `n_trials` zero-skill tries] | Bailey & López de Prado (2014) |
+| **PBO** | Probability that the in-sample winner ranks at or below the out-of-sample median | CSCV, Bailey, Borwein, López de Prado & Zhu (2017) |
+
+- `n_trials` must count **every configuration you tried** before choosing one (strategies,
+  parameters, timeframes). Under-counting inflates the DSR.
+- PBO cuts the T × N return matrix into `n_splits` contiguous blocks (default 16 → 12,870
+  combinations) and uses the conservative convention `logit <= 0`. Block sums are precomputed, so
+  each combination costs O(splits × strategies).
+- The report also gives the probability of an out-of-sample loss and the IS→OOS degradation
+  slope (negative = the better it looked in-sample, the worse it did out-of-sample).
+
+```bash
+quant-metrics-calculator overfit \
+  --returns returns_matrix.json \
+  --n-trials 10 \
+  --periods-per-year 8760 \
+  --output overfitting.json
+```
+
+Input (`returns_matrix.json`, e.g. the `returns_matrix` emitted by `event-driven-backtester validate`):
+
+```json
+{
+  "strategies": ["rsi_mean_reversion", "macd_crossover"],
+  "returns": [[0.0012, -0.0004], [-0.0031, 0.0008]],
+  "selected": "rsi_mean_reversion",
+  "n_trials": 10
+}
+```
+
+Output (excerpt):
+
+```json
+{
+  "selected_strategy": "rsi_mean_reversion",
+  "deflated_sharpe": {"sharpe_ratio": 0.012, "benchmark_sharpe_ratio": 0.018,
+                      "probabilistic_sharpe_ratio": 0.81, "deflated_sharpe_ratio": 0.34},
+  "pbo": {"probability_of_overfitting": 0.47, "n_combinations": 12870,
+          "probability_oos_loss": 0.52, "degradation_slope": -0.6}
+}
+```
+
+The numbers above illustrate the format; they are not results.
+
+---
+
 ## Architecture
 
 ```text
@@ -197,6 +251,7 @@ mypy src
 
 ## Roadmap
 
+- [x] Deflated Sharpe ratio and probability of backtest overfitting (v0.2.0)
 - [ ] Short-selling support in the FIFO reconstructor
 - [ ] Rolling metrics (30d rolling Sharpe)
 - [ ] HTML/PDF export for `quant-terminal-web`

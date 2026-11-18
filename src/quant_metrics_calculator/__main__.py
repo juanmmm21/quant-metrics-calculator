@@ -6,6 +6,10 @@ import logging
 from decimal import Decimal
 
 from quant_metrics_calculator.models import MetricsConfig
+from quant_metrics_calculator.overfitting_pipeline import (
+    load_returns_matrix,
+    run_overfitting_pipeline,
+)
 from quant_metrics_calculator.pipeline import run_metrics_pipeline
 
 
@@ -29,7 +33,30 @@ def build_parser() -> argparse.ArgumentParser:
     compute.add_argument("--periods-per-year", type=int, default=252)
     compute.add_argument("--output", default=None)
 
+    overfit = subparsers.add_parser(
+        "overfit",
+        help="Deflated Sharpe ratio and probability of backtest overfitting (CSCV).",
+    )
+    overfit.add_argument("--returns", required=True, help="JSON returns matrix (see README).")
+    overfit.add_argument("--selected", default=None, help="Strategy that was chosen.")
+    overfit.add_argument("--n-trials", type=int, default=None)
+    overfit.add_argument("--periods-per-year", type=int, default=None)
+    overfit.add_argument("--n-splits", type=int, default=16)
+    overfit.add_argument("--max-combinations", type=int, default=None)
+    overfit.add_argument("--output", default=None)
+
     return parser
+
+
+def _emit(payload: object, output: str | None, what: str) -> None:
+    rendered = json.dumps(payload, indent=2)
+    if output:
+        with open(output, "w", encoding="utf-8") as handle:
+            handle.write(rendered)
+            handle.write("\n")
+        logging.getLogger(__name__).info("wrote %s to %s", what, output)
+        return
+    print(rendered)
 
 
 def main() -> None:
@@ -50,14 +77,19 @@ def main() -> None:
             symbol=args.symbol,
             config=config,
         )
-        rendered = json.dumps(result, indent=2)
-        if args.output:
-            with open(args.output, "w", encoding="utf-8") as handle:
-                handle.write(rendered)
-                handle.write("\n")
-            logging.getLogger(__name__).info("wrote metrics to %s", args.output)
-            return
-        print(rendered)
+        _emit(result, args.output, "metrics")
+        return
+
+    if args.command == "overfit":
+        report = run_overfitting_pipeline(
+            load_returns_matrix(args.returns),
+            selected=args.selected,
+            n_trials=args.n_trials,
+            periods_per_year=args.periods_per_year,
+            n_splits=args.n_splits,
+            max_combinations=args.max_combinations,
+        )
+        _emit(report, args.output, "overfitting report")
         return
 
     raise RuntimeError(f"unsupported command: {args.command}")
